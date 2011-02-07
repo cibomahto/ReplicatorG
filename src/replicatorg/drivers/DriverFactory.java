@@ -87,6 +87,8 @@ public class DriverFactory {
 	public static Driver factory(String driverName, Node xml) {
 		if (driverName.equals("serialpassthrough"))
 			return loadClass("replicatorg.drivers.SerialPassthroughDriver", xml);
+		if (driverName.equals("socketpassthrough"))
+			return loadClass("replicatorg.drivers.SocketPassthroughDriver", xml);
 		else if (driverName.equals("sanguino3g"))
 			return loadClass("replicatorg.drivers.gen3.Sanguino3GDriver", xml);
 		else if (driverName.equals("makerbot4g"))

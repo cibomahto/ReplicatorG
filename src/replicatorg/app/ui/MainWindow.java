@@ -60,6 +60,8 @@ import java.awt.print.PageFormat;
 import java.awt.print.PrinterJob;
 import java.io.File;
 import java.io.IOException;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
 import java.util.Collections;
@@ -130,6 +132,7 @@ import replicatorg.drivers.OnboardParameters;
 import replicatorg.drivers.RealtimeControl;
 import replicatorg.drivers.SDCardCapture;
 import replicatorg.drivers.UsesSerial;
+import replicatorg.drivers.UsesSocket;
 import replicatorg.machine.MachineListener;
 import replicatorg.machine.MachineProgressEvent;
 import replicatorg.machine.MachineState;
@@ -2583,9 +2586,31 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 			getPreviewPanel().rebuildScene();
 			updateBuild();
 		}
+
+		if (machine.driver instanceof UsesSocket) {
+			UsesSocket us = (UsesSocket)machine.driver;
+			
+			Socket current = us.getSocket();
+			if (current == null) {
+				// TODO: report failure here
+				try {
+					us.setSocket(new Socket(us.getHostName(), us.getPortNumber()));
+					machine.connect();
+					
+				} catch (UnknownHostException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					Base.logger.fine("Error connecting- check that hostname and port are set correctly");
+				}
+			}
+			
+		}
 		
 		if (!connect) return;
-
+		
 		if (machine.driver instanceof UsesSerial) {
 			UsesSerial us = (UsesSerial)machine.driver;
 			String targetPort;
