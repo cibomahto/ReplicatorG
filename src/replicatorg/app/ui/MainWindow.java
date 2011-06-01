@@ -110,6 +110,7 @@ import replicatorg.app.syntax.PdeKeywords;
 import replicatorg.app.syntax.PdeTextAreaDefaults;
 import replicatorg.app.syntax.SyntaxDocument;
 import replicatorg.app.syntax.TextAreaPainter;
+import replicatorg.app.thingspeak.Thingspeak;
 import replicatorg.app.ui.controlpanel.ControlPanelWindow;
 import replicatorg.app.ui.modeling.PreviewPanel;
 import replicatorg.app.util.PythonUtils;
@@ -187,6 +188,8 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 	PrinterJob printerJob;
 
 	MainButtonPanel buttons;
+	
+	Thingspeak thingspeak;
 
 	CardLayout cardLayout = new CardLayout();
 	JPanel cardPanel = new JPanel(cardLayout);
@@ -266,6 +269,10 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 		MRJApplicationUtils.registerOpenDocumentHandler(this);
 
 		PythonUtils.setSelector(new SwingPythonSelector(this));
+		
+		// Start thingspeak daemon.
+		thingspeak = new Thingspeak();
+	    new Thread(thingspeak).start();
 		
 		machineLoader = Base.getMachineLoader();
 		
@@ -414,7 +421,7 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 		// Have UI elements listen to machine state.
 		machineLoader.addMachineListener(this);
 		machineLoader.addMachineListener(machineStatusPanel);
-		machineLoader.addMachineListener(buttons);			
+		machineLoader.addMachineListener(buttons);
 	}
 
 	// ...................................................................
