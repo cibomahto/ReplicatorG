@@ -105,6 +105,7 @@ import net.miginfocom.swing.MigLayout;
 import replicatorg.app.Base;
 import replicatorg.app.MRUList;
 import replicatorg.app.Base.InitialOpenBehavior;
+import replicatorg.app.Reporter;
 import replicatorg.app.syntax.JEditTextArea;
 import replicatorg.app.syntax.PdeKeywords;
 import replicatorg.app.syntax.PdeTextAreaDefaults;
@@ -189,7 +190,7 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 
 	MainButtonPanel buttons;
 	
-	Thingspeak thingspeak;
+	Reporter reporter;
 
 	CardLayout cardLayout = new CardLayout();
 	JPanel cardPanel = new JPanel(cardLayout);
@@ -271,8 +272,8 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 		PythonUtils.setSelector(new SwingPythonSelector(this));
 		
 		// Start thingspeak daemon.
-		thingspeak = new Thingspeak();
-	    new Thread(thingspeak).start();
+		reporter = new Reporter();
+	    new Thread(reporter).start();
 		
 		machineLoader = Base.getMachineLoader();
 		
