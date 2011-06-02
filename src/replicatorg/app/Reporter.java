@@ -10,7 +10,7 @@ import replicatorg.drivers.Driver;
 
 public class Reporter implements Runnable {
 
-	long intervalS = 15;
+	long intervalS = 10;
 	
 	public void sendStatus(Driver driver) {
 		String postURL = "http://10.0.0.83:8888/upload";
@@ -18,6 +18,8 @@ public class Reporter implements Runnable {
 		
 		String message = 
 	    "machinename=" + Base.getMachineLoader().getMachine().getMachineName()
+	    + "&jobname=" + Base.getEditor().build.getName()
+	    + "&status=" + Base.getMachineLoader().getMachine().getMachineState().getState().toString()
     	+ "&extrudertemp=" + Double.toString(driver.getTemperature())
     	+ "&platformtemp=" + Double.toString(driver.getPlatformTemperature());
 		

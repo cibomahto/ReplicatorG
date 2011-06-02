@@ -188,6 +188,10 @@ public class Base {
 		return getUserFile(path,true);
 	}
 
+	static public MainWindow getEditor() {
+		return editor;
+	}
+	
 	/**
 	 * 
 	 * @param path The relative path to the file in the .replicatorG directory
@@ -247,7 +251,7 @@ public class Base {
 	/**
 	 * The main UI window.
 	 */
-	MainWindow editor = null;
+	static MainWindow editor = null;
 
 	private static final String[] supportedExtensions = {
 			"gcode", "ngc",
