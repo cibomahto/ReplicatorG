@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Vector;
 
 import replicatorg.app.Base;
+import replicatorg.plugin.toolpath.skeinforge.PrintOMatic;
 import replicatorg.plugin.toolpath.skeinforge.SkeinforgeGenerator;
 
 public class ToolpathGeneratorFactory {
@@ -121,6 +122,10 @@ public class ToolpathGeneratorFactory {
 				supportPref.addOption("Full support", new SkeinforgeOption("raft.csv","Exterior Only", "false"));
 				
 				prefs.add(supportPref);
+				
+				PrintOMatic printOMatic = new PrintOMatic();
+				prefs.add(printOMatic);
+				
 				return prefs;
 			}
 		};
@@ -181,7 +186,7 @@ public class ToolpathGeneratorFactory {
 	}
 
 	static public String getSelectedName() {
-		String name = Base.preferences.get("replicatorg.generator.name", "Skeinforge (standard)");
+		String name = Base.preferences.get("replicatorg.generator.name", "Skeinforge (35)");
 		return name;
 	}
 

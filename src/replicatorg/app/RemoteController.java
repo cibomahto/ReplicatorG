@@ -7,6 +7,8 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.EnumSet;
+import java.util.LinkedList;
+import java.util.Queue;
 
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonProcessingException;
@@ -17,6 +19,7 @@ import org.codehaus.jackson.node.ValueNode;
 import replicatorg.app.Base;
 import replicatorg.drivers.Driver;
 import replicatorg.drivers.RetryException;
+import replicatorg.drivers.commands.DriverCommand;
 import replicatorg.machine.model.AxisId;
 import replicatorg.util.Point5d;
 
@@ -29,11 +32,19 @@ public class RemoteController extends Thread {
 	ServerSocket serverSocket;
 	Socket clientSocket;
 	
+	// Make up a parser to translate the gcode into driver commands
+	// Because each gcode might turn into multiple commands, we have to make a
+	// queue of them and then send them individually to the machine.
+	GCodeParser parser;
+	
 	public RemoteController(Driver driver, int port) {
 		this.driver = driver;
 		this.port = port;
 		
 		running = true;
+		
+		parser  = new GCodeParser();
+		parser.init(Base.getMachineLoader().getMachine().getDriverQueryInterface());
 	}
 	
 	private void doOpenFile(String filename) {
@@ -120,6 +131,10 @@ public class RemoteController extends Thread {
 				Base.getEditor().getPreviewPanel().updateZoom(zoom);
 				Base.getEditor().getPreviewPanel().adjustViewAngle(zrotate,0);
 			}
+			else if (command.contentEquals("gcode")) {
+				String gcode = rootNode.path("string").getTextValue();
+				runGcode(gcode);
+			}
 			else {
 				Base.logger.severe("Didn't understand command: " + command);
 			}
@@ -141,6 +156,15 @@ public class RemoteController extends Thread {
 //		}
 	}
 	
+	private void runGcode(String gcode) {		
+		Queue< DriverCommand > commandQueue = new LinkedList< DriverCommand >();
+		parser.parse(gcode, commandQueue);
+		
+		while (!commandQueue.isEmpty()) {
+			Base.getMachineLoader().getMachine().runCommand(commandQueue.remove());
+		}
+	}
+
 	// TODO: What /should/ this be called?? It should also be thread-safe or something.
 	public void shutdown() {
 		if (clientSocket != null) {
