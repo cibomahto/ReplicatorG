@@ -3,6 +3,7 @@
  */
 package replicatorg.app.ui;
 
+import java.awt.Color;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -25,6 +26,7 @@ import javax.swing.ComboBoxModel;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JColorChooser;
 import javax.swing.JComboBox;
 import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
@@ -53,12 +55,15 @@ public class PreferencesWindow extends JFrame implements GuiConstants {
 
 	JTextField fontSizeField;
 	JTextField firmwareUpdateUrlField;
+	JTextField logPathField;
 	
 	private void showCurrentSettings() {		
 		Font editorFont = Base.getFontPref("editor.font","Monospaced,plain,12");
 		fontSizeField.setText(String.valueOf(editorFont.getSize()));
 		String firmwareUrl = Base.preferences.get("replicatorg.updates.url", FirmwareUploader.DEFAULT_UPDATES_URL);
 		firmwareUpdateUrlField.setText(firmwareUrl);
+		String logPath = Base.preferences.get("replicatorg.logpath", "");
+		logPathField.setText(logPath);
 	}
 	
 	private JCheckBox addCheckboxForPref(Container c, String text, final String pref, boolean defaultVal) {
@@ -152,6 +157,45 @@ public class PreferencesWindow extends JFrame implements GuiConstants {
 		addCheckboxForPref(content,"Break Z motion into seperate moves (normally false)","replicatorg.parser.breakzmoves",false);
 		addCheckboxForPref(content,"Show starfield in model preview window","ui.show_starfield",false);
 		
+		
+		JButton modelColorButton;
+		modelColorButton = new JButton("Choose model color");
+		modelColorButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				// Note that this color is also defined in EditingModel.java
+				Color modelColor = new Color(Base.preferences.getInt("ui.modelColor",-19635));
+				modelColor = JColorChooser.showDialog(
+						null,
+		                "Choose Model Color",
+		                modelColor);;
+		                
+		        Base.preferences.putInt("ui.modelColor", modelColor.getRGB());
+		        Base.getEditor().refreshPreviewPanel();
+			}
+		});
+		modelColorButton.setVisible(true);
+		content.add(modelColorButton,"wrap");
+		
+		
+		JButton backgroundColorButton;
+		backgroundColorButton = new JButton("Choose background color");
+		backgroundColorButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				// Note that this color is also defined in EditingModel.java
+				Color backgroundColor = new Color(Base.preferences.getInt("ui.backgroundColor", 0));
+				backgroundColor = JColorChooser.showDialog(
+						null,
+		                "Choose Background Color",
+		                backgroundColor);;
+		                
+		        Base.preferences.putInt("ui.backgroundColor", backgroundColor.getRGB());
+		        Base.getEditor().refreshPreviewPanel();
+			}
+		});
+		backgroundColorButton.setVisible(true);
+		content.add(backgroundColorButton,"wrap");
+		
+		
 		content.add(new JLabel("Firmware update URL: "),"split");
 		firmwareUpdateUrlField = new JTextField(34);
 		content.add(firmwareUpdateUrlField,"wrap");
@@ -186,7 +230,25 @@ public class PreferencesWindow extends JFrame implements GuiConstants {
 			content.add(new JLabel("Debugging level (default INFO):"),"split");
 			content.add(makeDebugLevelDropdown(),"wrap");
 		}
-		
+
+		{
+			final JCheckBox logCb = addCheckboxForPref(content,"Log to file","replicatorg.useLogFile",false);
+			final JLabel logPathLabel = new JLabel("Log file name: "); 
+			content.add(logPathLabel,"split");
+			logPathField = new JTextField(34);
+			content.add(logPathField,"wrap");
+			logPathField.setEnabled(logCb.isSelected());
+			logPathLabel.setEnabled(logCb.isSelected());
+
+			logCb.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					JCheckBox box = (JCheckBox)e.getSource();
+					logPathField.setEnabled(box.isSelected());
+					logPathLabel.setEnabled(box.isSelected());
+				}
+			});
+
+		}
 		{
 			JButton b = new JButton("Select Python interpreter...");
 			content.add(b,"spanx,wrap");
@@ -293,6 +355,11 @@ public class PreferencesWindow extends JFrame implements GuiConstants {
 			Base.preferences.put("replicatorg.updates.url",firmwareUpdateUrlField.getText());
 			FirmwareUploader.checkFirmware(); // Initiate a new firmware check
 		}
+
+		String logPath = logPathField.getText();
+		Base.preferences.put("replicatorg.logpath", logPath);
+		Base.setLogFile(logPath);
+		
 		editor.applyPreferences();
 	}
 

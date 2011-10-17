@@ -46,6 +46,7 @@ import replicatorg.drivers.RetryException;
 import replicatorg.drivers.SDCardCapture;
 import replicatorg.drivers.SerialDriver;
 import replicatorg.drivers.Version;
+import replicatorg.drivers.OnboardParameters.CommunicationStatistics;
 import replicatorg.drivers.gen3.PacketProcessor.CRCException;
 import replicatorg.machine.model.AxisId;
 import replicatorg.machine.model.ToolModel;
@@ -414,6 +415,24 @@ public class Sanguino3GDriver extends SerialDriver
 		}
 		return v;
 	}
+	
+	
+	public CommunicationStatistics getCommunicationStatistics() {
+		CommunicationStatistics stats = new CommunicationStatistics();
+		
+		PacketBuilder pb = new PacketBuilder(MotherboardCommandCode.GET_COMMUNICATION_STATS.getCode());
+
+		PacketResponse pr = runQuery(pb.getPacket(),1);
+		if (pr.isEmpty()) return null;
+		stats.packetCount = pr.get32();
+		stats.sentPacketCount = pr.get32();
+		stats.packetFailureCount = pr.get32();
+		stats.packetRetryCount = pr.get32();
+		stats.noiseByteCount = pr.get32();
+		
+		return stats;
+	}
+	
 	
 	private void initSlave(int toolIndex) {
 		PacketBuilder slavepb = new PacketBuilder(MotherboardCommandCode.TOOL_QUERY.getCode());
@@ -1490,6 +1509,7 @@ public class Sanguino3GDriver extends SerialDriver
 		if ( (b[0] & (0x01 << 2)) != 0 ) r.add(AxisId.Z);
 		if ( (b[0] & (0x01 << 3)) != 0 ) r.add(AxisId.A);
 		if ( (b[0] & (0x01 << 4)) != 0 ) r.add(AxisId.B);
+		if ( (b[0] & (0x01 << 7)) != 0 ) r.add(AxisId.V);
 		return r;
 	}
 
@@ -1500,6 +1520,7 @@ public class Sanguino3GDriver extends SerialDriver
 		if (axes.contains(AxisId.Z)) b[0] = (byte)(b[0] | (0x01 << 2));
 		if (axes.contains(AxisId.A)) b[0] = (byte)(b[0] | (0x01 << 3));
 		if (axes.contains(AxisId.B)) b[0] = (byte)(b[0] | (0x01 << 4));
+		if (axes.contains(AxisId.V)) b[0] = (byte)(b[0] | (0x01 << 7));
 		writeToEEPROM(EEPROM_AXIS_INVERSION_OFFSET,b);
 	}
 
@@ -1701,6 +1722,26 @@ public class Sanguino3GDriver extends SerialDriver
 		writeToToolEEPROM(ECThermistorOffsets.data(which),table);
 	}
 
+	public boolean getCoolingFanEnabled() {
+		byte[] a = readFromToolEEPROM(CoolingFanOffsets.COOLING_FAN_ENABLE, 1);
+		
+		return (a[0] == 1);
+	}
+	
+	public int getCoolingFanSetpoint() {
+		return read16FromToolEEPROM(CoolingFanOffsets.COOLING_FAN_SETPOINT_C, 50);
+	}
+	
+	public void setCoolingFanParameters(boolean enabled, int setpoint) {
+		if (enabled) {
+			writeToToolEEPROM(CoolingFanOffsets.COOLING_FAN_ENABLE,new byte[] {0x1});
+		}
+		else {
+			writeToToolEEPROM(CoolingFanOffsets.COOLING_FAN_ENABLE,new byte[] {0x0});	
+		}
+		writeToToolEEPROM(CoolingFanOffsets.COOLING_FAN_SETPOINT_C,intToLE(setpoint));
+	}
+	
 	private byte[] intToLE(int s, int sz) {
 		byte buf[] = new byte[sz];
 		for (int i = 0; i < sz; i++) {
@@ -1857,7 +1898,12 @@ public class Sanguino3GDriver extends SerialDriver
 		final static int P_TERM_OFFSET = 0x0000;
 		final static int I_TERM_OFFSET = 0x0002;
 		final static int D_TERM_OFFSET = 0x0004;
-	};	
+	};
+	
+	final static class CoolingFanOffsets {
+		final static int COOLING_FAN_ENABLE		= 0x001c;
+		final static int COOLING_FAN_SETPOINT_C	= 0x001d;
+	};
 	
 	private int read16FromToolEEPROM(int offset, int defaultValue) {
 		byte r[] = readFromToolEEPROM(offset,2);

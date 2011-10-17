@@ -251,6 +251,12 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 
 	public Build getBuild() { return build; }
 	
+	public void refreshPreviewPanel() {
+		if (previewPanel != null) {
+			previewPanel.rebuildScene();
+		}
+	}
+	
 	public PreviewPanel getPreviewPanel() {
 		if (previewPanel == null) {
 			previewPanel = new PreviewPanel(this);
@@ -892,6 +898,7 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 	JMenuItem extruderParamsItem = new JMenuItem("Toolhead Onboard Preferences...");
 	JMenuItem toolheadIndexingItem = new JMenuItem("Set Toolhead Index...");
 	JMenuItem realtimeControlItem = new JMenuItem("Open real time controls window...");
+	JMenuItem infoPanelItem = new JMenuItem("Machine information...");
 	
 	protected JMenu buildMachineMenu() {
 		JMenuItem item;
@@ -958,6 +965,15 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 		});
 		menu.add(item);
 		
+		infoPanelItem.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent arg0) {
+				handleInfoPanel();
+			}
+		});
+		
+		infoPanelItem.setVisible(true);
+		menu.add(infoPanelItem);
+		
 		return menu;
 	}
 
@@ -973,6 +989,12 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 			indexer.setVisible(true);
 		}
 	}
+	
+	protected void handleInfoPanel() {
+		InfoPanel infoPanel = new InfoPanel();
+		infoPanel.setVisible(true);
+	}
+	
 	public boolean supportsRealTimeControl() {
 		if (!(machineLoader.getDriver() instanceof RealtimeControl)) {
 			return false;
@@ -980,6 +1002,7 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 		Base.logger.info("Supports RC");
 		return true;
 	}
+	
 	protected void handleRealTimeControl() {
 		if(!this.supportsRealTimeControl()) {
 			JOptionPane.showMessageDialog(
@@ -996,6 +1019,14 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 		}
 	}
 	class MachineMenuListener implements ActionListener {
+
+		/* a quick case insensitive match function. 
+		 * @returns true of subString is in baseString (case insensitive), false otherwise
+		 **/
+		public boolean containsIgnoreCase(String baseString, String subString) {
+			return Pattern.compile(Pattern.quote(subString), Pattern.CASE_INSENSITIVE).matcher(baseString).find();
+
+		}
 		public void actionPerformed(ActionEvent e) {
 			if (machineMenu == null) {
 				System.out.println("machineMenu is null");
@@ -1011,6 +1042,16 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 			if (e.getSource() instanceof JRadioButtonMenuItem) {
 				JRadioButtonMenuItem item = (JRadioButtonMenuItem) e.getSource();
 				final String name = item.getText();
+				
+				//if new machine driver name have "Mk5" and the previous driver name does not
+				if(containsIgnoreCase(name, "MK5" ) && 
+						(containsIgnoreCase( Base.preferences.get("machine.name", null), "MK5") ==  false ) )
+				{ 
+					String msg = new String("MK6 or newer  downgrading to MK5 requires manual changes.\n Search 'Mk5 Extruder Downgrade' on http://wiki.makerbot.com for instructions.");
+					JOptionPane.showMessageDialog(null, msg,  "Warning:Manual Downgrade to MK5 Needed", JOptionPane.WARNING_MESSAGE);
+
+				}
+
 				Base.preferences.put("machine.name", name);
 			}
 		}
@@ -1030,6 +1071,9 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 		}
 	}
 	
+	/* Function to generate a list of
+	 * supported machines to be displayed in the Driver menu item.
+	 */
 	protected void populateMachineMenu() {
 		machineMenu.removeAll();
 		machineMenuListener = new MachineMenuListener();
@@ -1043,8 +1087,8 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 			System.out.println("error retrieving machine list");
 			exception.printStackTrace();
 		}
-		
 		Collections.sort(names);
+		
 		ButtonGroup radiogroup = new ButtonGroup();
 		for (String name : names ) {
 						
@@ -1324,6 +1368,7 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 		if ( name != null ) {
 			loadMachine(name, true);
 		}
+
 	}
 	
 	public void handleOnboardPrefs() {
@@ -1763,6 +1808,10 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 			((RealtimeControl)machineLoader.getDriver()).hasFeatureRealtimeControl();
 		realtimeControlItem.setVisible(showRealtimeTuning);
 		realtimeControlItem.setEnabled(showRealtimeTuning);
+		
+		// TODO: When should this be enabled?
+		infoPanelItem.setEnabled(true);
+		
 		// Advertise machine name
 		String name = "Not Connected";
 		if (evt.getState().isConnected() && machineLoader.isLoaded()) {
@@ -2522,8 +2571,12 @@ public class MainWindow extends JFrame implements MRJAboutHandler, MRJQuitHandle
 		// 3. If this is a new machine, record a reference to it
 		// 4. Hook the machine to the main window.
 		
-		machineLoader.load(name);
-		// TODO: Check if the machine failed to load, and bail here if necessary?
+		boolean loaded = machineLoader.load(name);
+		
+		if(loaded == false) {
+			Base.logger.severe("could not load machine '" + name + "' please check Driver-> <Machine Name> ");
+			return;
+		}
 		
 		String targetPort;
 	
